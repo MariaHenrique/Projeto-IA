@@ -1,10 +1,10 @@
 #coding:utf-8
-
+#
 # Project IA
 # Group: Andreza Queiroz,
 #	 Carlos Interaminense, 
 #	 Maria Daniela
-
+#
 #Author: Carlos Interaminense
 
 from __future__ import print_function, division
@@ -16,7 +16,8 @@ from nltk import word_tokenize, WordNetLemmatizer
 from nltk.corpus import stopwords
 from nltk import NaiveBayesClassifier, classify
 import sys
- 
+import csv
+
 stoplist = stopwords.words('english')
 
 #Função para carregar os emails
@@ -35,114 +36,71 @@ def preprocess(sentence):
     lemmatizer = WordNetLemmatizer()
     return [lemmatizer.lemmatize(word.lower()) for word in word_tokenize(unicode(sentence, errors='ignore'))]
 
-# Extrai as características dos emails. 
+# Computa a frequencia das palavras dos emails. 
 def get_features(text, setting):
     if setting=='bow':
         return {word: count for word, count in Counter(preprocess(text)).items() if not word in stoplist}
     else:
         return {word: True for word in preprocess(text) if not word in stoplist}
 
+def zeros_list(n):
+	l = []
+	for i in range(n):
+		l.append(0)
+
+	return l
+	
+def read_file_csv(file_name_csv):
+	l = []
+	with open(file_name_csv, 'rb') as f:
+	    reader = csv.reader(f)
+	    l = list(reader)
+	return l
+	
 args = sys.argv
 
-path_train_spam = args[1]
-path_train_ham = args[2]
+if(len(args) != 5):
+	print("python extract-features.py <PATH/TO/FOLDER/HAM> <PATH/TO/FOLDER/SPAM> <FILENAME-HISTOGRAMS> <(treino ou teste)>")
+else:
+	path_ham = args[1]
+	path_spam = args[2]
+	filename_out_histograms = args[3]
+	is_train = ("treino" == args[4])
 
-spam = init_lists(path_train_spam)
-ham = init_lists(path_train_ham)
+	file_name_csv = "words_frequen_in_spam.csv"
+	list_words = read_file_csv(file_name_csv)[0]
 
-all_emails = [(email, 'spam') for email in spam]
-all_emails += [(email, 'ham') for email in ham]
+	ham = init_lists(path_ham)
+	spam = init_lists(path_spam)
 
-print ('Corpus size = ' + str(len(all_emails)) + ' emails')
+	spam = [(email, 'spam') for email in spam]
+	ham = [(email, 'ham') for email in ham]
 
-'''
-all_features = []
-count = 1
-for email, label in all_emails:
-	print ('email. ' + str(count))
-	print email
-	count +=1
-	all_features.append((get_features(email, ""), label))
-	print all_features
-'''
-all_features = [(get_features(email, 'bow'), label) for (email, label) in all_emails]
-words = []
-frequency = []
-for email_feat in all_features:
-	for word in email_feat[0].keys():
-		if (word in words):
-			frequency[words.index(word)] = frequency[words.index(word)] + 1
-		else:
-			words.append(word)
-			frequency.append(email_feat[0][word])
+	histograms = []
+	for email in spam:
+		hist_email = zeros_list(len(list_words))
+		label = email[1]
+		for i in range(len(list_words)):
+			if(list_words[i] in email[0]):
+				hist_email[i] = hist_email[i] +1;
+		if(is_train): hist_email.append(label)
+		else: hist_email.append("null")
+		histograms.append(hist_email)
+		
 
-#	print(email_feat)
-	print (words)
-	print (frequency)
-	raw_input()
+	for email in ham:
+		hist_email = zeros_list(len(list_words))
+		label = email[1]
+		for i in range(len(list_words)):
+			if(list_words[i] in email[0]):
+				hist_email[i] = hist_email[i] +1;
+		if(is_train): hist_email.append(label)
+		else: hist_email.append("null")
+		histograms.append(hist_email)
+	
+	random.shuffle(histograms)
 
-print ('Collected ' + str(len(all_features)) + ' feature sets')
-print (all_features[0])
-print ("\n\n#################\n\n")
-print (all_features[1])
-
-
-
-
-
-
-
-
-
- 
- 
-''' 
-def train(features, samples_proportion):
-    train_size = int(len(features) * samples_proportion)
-    # initialise the training and test sets
-    train_set, test_set = features[:train_size], features[train_size:]
-    print ('Training set size = ' + str(len(train_set)) + ' emails')
-    print ('Test set size = ' + str(len(test_set)) + ' emails')
-    # train the classifier
-    classifier = NaiveBayesClassifier.train(train_set)
-    return train_set, test_set, classifier
- 
-def evaluate(train_set, test_set, classifier):
-    # check how the classifier performs on the training and test sets
-    print ('Accuracy on the training set = ' + str(classify.accuracy(classifier, train_set)))
-    print ('Accuracy of the test set = ' + str(classify.accuracy(classifier, test_set)))
-    # check which words are most informative for the classifier
-    classifier.show_most_informative_features(20)
- 
-
-# initialise the data
-spam = init_lists('enron1/spam/')
-ham = init_lists('enron1/ham/')
-all_emails = [(email, 'spam') for email in spam]
-all_emails += [(email, 'ham') for email in ham]
-random.shuffle(all_emails)
-print ('Corpus size = ' + str(len(all_emails)) + ' emails')
- 
-# extract the features
-all_features = [(get_features(email, ''), label) for (email, label) in all_emails]
-print ('Collected ' + str(len(all_features)) + ' feature sets')
- 
-# train the classifier
-train_set, test_set, classifier = train(all_features, 0.8)
- 
-# evaluate its performance
-evaluate(train_set, test_set, classifier)
-'''
-
-
-
-
-
-
-
-
-
-
-
-
-
+	with open(filename_out_histograms, "wb") as f:
+	    writer = csv.writer(f)
+	    wr = csv.writer(f, quoting=csv.QUOTE_ALL)
+	    writer.writerows(histograms)
