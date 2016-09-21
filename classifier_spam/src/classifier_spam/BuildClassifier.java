@@ -21,7 +21,6 @@ public class BuildClassifier {
 		if (args.length < 4) {
 			throw new NullPointerException("Parameters not valid.");
 		}
-
 		// Ler os arquivos de treinamento e teste
 		BufferedReader reader_tr = null;
 		reader_tr = new BufferedReader(new FileReader(args[0]));
@@ -74,13 +73,13 @@ public class BuildClassifier {
 		classifier.buildClassifier(trainSet);
 
 		PrintWriter writer = new PrintWriter(args[3]);
-		writer.println("Atual;Pred;Acerto");
+		//writer.println("Atual;Pred;Acerto");
 
 		// Realiza as predições
 		for (int i = 0; i < testSet.numInstances(); i++) {
 			double pred = classifier.classifyInstance(testSet.instance(i));
 
-			writer.print(testSet.instance(i).toString(testSet.classIndex()));
+		/*	writer.print(testSet.instance(i).toString(testSet.classIndex()));
 			writer.print(";");
 			writer.print(testSet.classAttribute().value((int) pred));
 			writer.print(";");
@@ -88,7 +87,7 @@ public class BuildClassifier {
 				writer.println("Sim");
 			} else {
 				writer.println("Não");
-			}
+			}*/
 
 		}
 		
@@ -104,6 +103,16 @@ public class BuildClassifier {
 		writer.print(evaluation.precision(1)+";");
 		writer.println(evaluation.recall(1));
 		
+		double[][] cm = evaluation.confusionMatrix();
+		System.out.println();
+		writer.println();
+		writer.println("Matriz de confusão");
+		writer.println("TP; FP; FN; TN");
+		for (int i=0; i < cm.length; i++ ){
+			for (int j=0; j < cm[0].length; j++){
+				writer.print(cm[i][j] + ";");
+			}
+		}
 		writer.close();		
 		System.out.println("DONE!");
 	}
