@@ -29,7 +29,7 @@ class convert(object):
                for row in lines:
                    self.content.append(row)
             csvfile.close()
-            sleep(2) #sleeps added for dramatic effect!
+#            sleep(2) #sleeps added for dramatic effect!
             
         #just in case user tries to open a file that doesn't exist
         except IOError:

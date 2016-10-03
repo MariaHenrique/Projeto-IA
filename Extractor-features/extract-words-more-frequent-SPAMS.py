@@ -17,6 +17,7 @@ from nltk.corpus import stopwords
 from nltk import NaiveBayesClassifier, classify
 import sys
 import csv
+import math
 
 stoplist = stopwords.words('english')
 
@@ -38,6 +39,8 @@ def preprocess(sentence):
 
 # Computa a frequencia das palavras dos emails. 
 def get_features(text, setting):
+#    print (text)
+#    raw_input("Digite um caracter")
     if setting=='bow':
         return {word: count for word, count in Counter(preprocess(text)).items() if not word in stoplist}
     else:
@@ -45,23 +48,25 @@ def get_features(text, setting):
 
 args = sys.argv
 
-if(len(args) != 5):
-	print ("python extract-words-more-frequent-SPAMS <PATH/TO/SPAMS/> <PATH/TO/SPAMS/> <NUMBER-WORDS-MORE-FREQUENT> <FILENAME-CVS>")
+if(len(args) != 4):
+	print ("python extract-words-more-frequent-SPAMS <PATH/TO/EMAILS-TRAIN-SPAM/> <NUMBER-WORDS-MORE-FREQUENT> <FILENAME-CVS>")
 else:
 	path_train_spam = args[1]
-	path_train_spam_test = args[2]
-	n = int(args[3])
+	n = int(args[2])
+	filename_out = args[3]
 	#path_train_ham = args[2]
 
 	spam = init_lists(path_train_spam)
-	spam_test = init_lists(path_train_spam_test)
+	
 
 	all_emails = [(email, 'spam') for email in spam]
-	all_emails += [(email, 'spam') for email in spam_test]
-
+	
 	print ('Corpus size = ' + str(len(all_emails)) + ' emails')
 
 	all_features = [(get_features(email, 'bow'), label) for (email, label) in all_emails]
+	
+	
+	
 	words = []
 	frequency = []
 	print ("computing frequency of words...")
@@ -72,6 +77,7 @@ else:
 			else:
 				words.append(word)
 				frequency.append(email_feat[0][word])
+
 
 	print ("sorting the frequency...")
 	flag = True
@@ -89,19 +95,64 @@ else:
 			
 				flag = True
 	index = 0
-	count = 0
 	list_words_more_frenquent = []
+	count = 0
 	while(count < n):
 		if(len(words[index]) <= 3 or words[index] == "subject" or words[index]=="http"):
 			index+=1
 			continue
 		list_words_more_frenquent.append(words[index])
-		count +=1
 		index += 1	
-
-
-	myfile = open(args[4], 'wb')
+		count +=1
+	
+	myfile = open(filename_out, 'wb')
 	wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
 	wr.writerow(list_words_more_frenquent)
 
+	df = [0 for i in range(n)]
+	
+	for email in spam:
+		for word in list_words_more_frenquent:
+			if(str(word) in preprocess(email)):
+				df[list_words_more_frenquent.index(word)]+=1
+					
+	logs = []
+	n = len(spam)
+	for i in df:
+		logs.append(math.log10( n / (float(i)) ) )
+	
+	l = [list_words_more_frenquent, logs]
+
+	with open("words_and_log.txt", "wb") as f:
+    		writer = csv.writer(f)
+    		writer.writerows(l)
+	
+	
+	myfile2 = open("df-test.txt", 'wb')
+	wr2 = csv.writer(myfile2, quoting=csv.QUOTE_ALL)
+	wr2.writerow(df)
+	
+	myfile3 = open("logs-test.txt", 'wb')
+	wr3 = csv.writer(myfile3, quoting=csv.QUOTE_ALL)
+	wr3.writerow(logs)
+	
 	print ('Collected ' + str(len(all_features)) + ' feature sets')
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
