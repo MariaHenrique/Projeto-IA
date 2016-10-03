@@ -18,93 +18,141 @@ public class BuildClassifier {
 	public static void main(String[] args) throws Exception {
 
 		// args = fileTrain fileTest classificador outputFile.csv
-		if (args.length < 4) {
+		if (args.length != 5 && args.length != 2) {
 			throw new NullPointerException("Parameters not valid.");
 		}
-
-		// Ler os arquivos de treinamento e teste
-		BufferedReader reader_tr = null;
-		reader_tr = new BufferedReader(new FileReader(args[0]));
+		if (args[0].equals("1")){
+			createClassifierModel(args[1], args[2], args[3],args[4]);
+		} else {
+			testInst(args[1]);	
+		}
+	}
+	
+	private static void testInst(String test_file) throws Exception{
 		BufferedReader reader_te = null;
-		reader_te = new BufferedReader(new FileReader(args[1]));
-
-		// Carrega os dados de treinamento e teste
-		Instances trainSet = new Instances(reader_tr);
+		reader_te = new BufferedReader(new FileReader(test_file));
+		
 		Instances testSet = new Instances(reader_te);
-
-		// Pega a classe de cada linha do arquivo (que [e o último atributo)
-		trainSet.setClassIndex(trainSet.numAttributes() - 1);
 		testSet.setClassIndex(testSet.numAttributes() - 1);
-		// Fecha os buffers
-		reader_tr.close();
 		reader_te.close();
-
-		// Verifica se o arquivo de treino e teste possui os mesmos atributos
-		if (!trainSet.equalHeaders(testSet))
-			throw new IllegalArgumentException(
-					"Train and test set are not compatible: " + trainSet.equalHeadersMsg(testSet));
-
-		Classifier classifier = null;
-
-		switch (args[2].toLowerCase()) {
-		case "j48":
-			classifier = new J48();
-			break;
-		case "naivebayes":
-			classifier = new NaiveBayes();
-			break;
-		case "smo":
-			classifier = new SMO();
-			break;
-		case "radomtree":
-			classifier = new RandomTree();
-			break;
-		case "naivebayesmultinomial":
-			classifier = new NaiveBayesMultinomial();
-			break;
-		case "multilayerperceptron":
-			classifier = new MultilayerPerceptron();
-			break;
-		default:
-			break;
-		}
-		if (classifier == null) {
-			throw new NullPointerException("Invalid Classifier in parameter.");
-		}
-		classifier.buildClassifier(trainSet);
-
-		PrintWriter writer = new PrintWriter(args[3]);
-		writer.println("Atual;Pred;Acerto");
-
-		// Realiza as predições
+		
+		Classifier classifier = (Classifier) weka.core.SerializationHelper.read("files/cls.model");
+	
+		//PrintWriter writer = new PrintWriter("files/" + output_file);
 		for (int i = 0; i < testSet.numInstances(); i++) {
 			double pred = classifier.classifyInstance(testSet.instance(i));
-
-			writer.print(testSet.instance(i).toString(testSet.classIndex()));
-			writer.print(";");
-			writer.print(testSet.classAttribute().value((int) pred));
-			writer.print(";");
-			if (pred == testSet.instance(i).classValue()) {
-				writer.println("Sim");
+		
+			if (pred == 0){
+				System.out.println("E-mail HAM");
 			} else {
-				writer.println("Não");
+				System.out.println("E-mail SPAM");
 			}
-
+	
 		}
-		
-		// Avaliação
-		Evaluation evaluation = new Evaluation(trainSet);
-		evaluation.evaluateModel(classifier, testSet);
-		System.out.println();
-		writer.println("F-Measure (HAM);Precisão (HAM);Recuperação (HAM);F-Measure (SPAM);Precisão (SPAM);Recuperação (SPAM)");
-		writer.print(evaluation.fMeasure(0)+";");
-		writer.print(evaluation.precision(0)+";");
-		writer.print(evaluation.recall(0)+";");
-		writer.print(evaluation.fMeasure(1)+";");
-		writer.print(evaluation.precision(1)+";");
-		writer.println(evaluation.recall(1));
-		
-		writer.close();		
-		System.out.println("DONE!");
+	}
+	private static void createClassifierModel(String train_file, String test_file, String algotithm, String output_file) throws Exception{
+		// Ler os arquivos de treinamento e teste
+				BufferedReader reader_tr = null;
+				reader_tr = new BufferedReader(new FileReader(train_file));
+				BufferedReader reader_te = null;
+				reader_te = new BufferedReader(new FileReader(test_file));
+
+				// Carrega os dados de treinamento e teste
+				Instances trainSet = new Instances(reader_tr);
+				Instances testSet = new Instances(reader_te);
+
+				// Pega a classe de cada linha do arquivo (que [e o último atributo)
+				trainSet.setClassIndex(trainSet.numAttributes() - 1);
+				testSet.setClassIndex(testSet.numAttributes() - 1);
+				// Fecha os buffers
+				reader_tr.close();
+				reader_te.close();
+
+				// Verifica se o arquivo de treino e teste possui os mesmos atributos
+				if (!trainSet.equalHeaders(testSet))
+					throw new IllegalArgumentException(
+							"Train and test set are not compatible: " + trainSet.equalHeadersMsg(testSet));
+
+				Classifier classifier = null;
+
+				switch (algotithm.toLowerCase()) {
+				case "j48":
+					classifier = new J48();
+					break;
+				case "naivebayes":
+					classifier = new NaiveBayes();
+					break;
+				case "smo":
+					classifier = new SMO();
+					break;
+				case "radomtree":
+					classifier = new RandomTree();
+					break;
+				case "naivebayesmultinomial":
+					classifier = new NaiveBayesMultinomial();
+					break;
+				case "multilayerperceptron":
+					classifier = new MultilayerPerceptron();
+					break;
+				default:
+					break;
+				}
+				if (classifier == null) {
+					throw new NullPointerException("Invalid Classifier in parameter.");
+				}
+				classifier.buildClassifier(trainSet);
+				
+				/*ObjectOutputStream out_model = new ObjectOutputStream(
+		                new FileOutputStream("cls.model"));
+				
+				out_model.writeObject(classifier);
+				out_model.flush();
+				out_model.close();*/
+				
+			    weka.core.SerializationHelper.write("files/cls.model", classifier);
+
+				PrintWriter writer = new PrintWriter("files/" + output_file);
+				//writer.println("Atual;Pred;Acerto");
+
+				// Realiza as predições
+				for (int i = 0; i < testSet.numInstances(); i++) {
+					double pred = classifier.classifyInstance(testSet.instance(i));
+
+				/*	writer.print(testSet.instance(i).toString(testSet.classIndex()));
+					writer.print(";");
+					writer.print(testSet.classAttribute().value((int) pred));
+					writer.print(";");
+					if (pred == testSet.instance(i).classValue()) {
+						writer.println("Sim");
+					} else {
+						writer.println("Não");
+					}*/
+
+				}
+				
+				// Avaliação
+				Evaluation evaluation = new Evaluation(trainSet);
+				evaluation.evaluateModel(classifier, testSet);
+				System.out.println();
+				writer.println("F-Measure (HAM);Precisão (HAM);Recuperação (HAM);F-Measure (SPAM);Precisão (SPAM);Recuperação (SPAM)");
+				writer.print(evaluation.fMeasure(0)+";");
+				writer.print(evaluation.precision(0)+";");
+				writer.print(evaluation.recall(0)+";");
+				writer.print(evaluation.fMeasure(1)+";");
+				writer.print(evaluation.precision(1)+";");
+				writer.println(evaluation.recall(1));
+				
+				double[][] cm = evaluation.confusionMatrix();
+				System.out.println();
+				writer.println();
+				writer.println("Matriz de confusão");
+				writer.println("TP; FP; FN; TN");
+				for (int i=0; i < cm.length; i++ ){
+					for (int j=0; j < cm[0].length; j++){
+						writer.print(cm[i][j] + ";");
+					}
+				}
+				writer.close();		
+				System.out.println("DONE!");
 	}
 }
