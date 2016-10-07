@@ -19,8 +19,8 @@ public class BuildClassifierCrossValidation {
 
 	public static void main(String[] args) throws Exception {
 
-		// args =  fileTrain fileTest classificador outputFile.csv
-		if (args.length != 5 && args.length != 2) {
+		// args = id fileTrain  classificador outputFile.csv
+		if (args.length != 4 && args.length != 2) {
 			throw new NullPointerException("Parameters not valid.");
 		}
 		
@@ -96,24 +96,27 @@ public class BuildClassifierCrossValidation {
 					throw new NullPointerException("Invalid Classifier in parameter.");
 				}
 				
+				classifier.buildClassifier(trainSet);
 				
-				  //Training instances are held in "originalTrain"
-
+			    weka.core.SerializationHelper.write("files/cls_cv.model", classifier);
 			    
+				
 			    Evaluation evaluation = new Evaluation(trainSet);
-			    evaluation.crossValidateModel(classifier, trainSet, 10, new Random(1));
+			    evaluation.crossValidateModel(classifier, trainSet, 10, new Random(1));			    
+			    
 			    
 			    PrintWriter writer = new PrintWriter("files/" + output_file);
-			    writer.println("F-Measure (HAM);Precisão (HAM);Recuperação (HAM);F-Measure (SPAM);Precisão (SPAM);Recuperação (SPAM)");
+			    writer.println("F-Measure (HAM);Precisão (HAM);Recuperação (HAM);F-Measure (SPAM);Precisão (SPAM);Recuperação (SPAM); Acurácia");
 				writer.print(evaluation.fMeasure(0)+";");
 				writer.print(evaluation.precision(0)+";");
 				writer.print(evaluation.recall(0)+";");
 				writer.print(evaluation.fMeasure(1)+";");
-				writer.print(evaluation.precision(1)+";");
-				writer.println(evaluation.recall(1));
+				writer.print(evaluation.precision(1)+";"); 
+				writer.print(evaluation.recall(1)+";");
+				System.out.println("Estimated Accuracy: "+Double.toString(evaluation.pctCorrect()));
+				
 				
 				double[][] cm = evaluation.confusionMatrix();
-				System.out.println();
 				writer.println();
 				writer.println("Matriz de confusão");
 				writer.println("TP; FP; FN; TN");
