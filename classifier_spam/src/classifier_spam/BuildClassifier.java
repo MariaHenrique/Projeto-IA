@@ -3,6 +3,7 @@ package classifier_spam;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.util.Random;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -18,12 +19,14 @@ public class BuildClassifier {
 	public static void main(String[] args) throws Exception {
 
 		// args = fileTrain fileTest classificador outputFile.csv
-		if (args.length != 5 && args.length != 2) {
+		if (args.length != 5 && args.length != 2 && args.length != 4) {
 			throw new NullPointerException("Parameters not valid.");
 		}
 		if (args[0].equals("1")){
 			createClassifierModel(args[1], args[2], args[3],args[4]);
-		} else {
+		} if (args[0].equals("2")){
+			createClassifierModelCV(args[1], args[2], args[3]);
+		}else {
 			testInst(args[1]);	
 		}
 	}
@@ -102,13 +105,6 @@ public class BuildClassifier {
 				}
 				classifier.buildClassifier(trainSet);
 				
-				/*ObjectOutputStream out_model = new ObjectOutputStream(
-		                new FileOutputStream("cls.model"));
-				
-				out_model.writeObject(classifier);
-				out_model.flush();
-				out_model.close();*/
-				
 			    weka.core.SerializationHelper.write("files/cls.model", classifier);
 
 				PrintWriter writer = new PrintWriter("files/" + output_file);
@@ -155,4 +151,73 @@ public class BuildClassifier {
 				writer.close();		
 				System.out.println("DONE!");
 	}
+	private static void createClassifierModelCV(String m_file, String algotithm, String output_file) throws Exception{
+		BufferedReader reader_file = null;
+		reader_file = new BufferedReader(new FileReader(m_file));
+		
+		Instances m_set = new Instances(reader_file);
+		
+		m_set.setClassIndex(m_set.numAttributes() - 1);
+
+		reader_file.close();
+
+		Classifier classifier = null;
+
+		switch (algotithm.toLowerCase()) {
+		case "j48":
+			classifier = new J48();
+			break;
+		case "naivebayes":
+			classifier = new NaiveBayes();
+			break;
+		case "smo":
+			classifier = new SMO();
+			break;
+		case "radomtree":
+			classifier = new RandomTree();
+			break;
+		case "naivebayesmultinomial":
+			classifier = new NaiveBayesMultinomial();
+			break;
+		case "multilayerperceptron":
+			classifier = new MultilayerPerceptron();
+			break;
+		default:
+			break;
+		}
+		if (classifier == null) {
+			throw new NullPointerException("Invalid Classifier in parameter.");
+		}
+		
+		classifier.buildClassifier(m_set);
+		
+	   // weka.core.SerializationHelper.write("files/cls_cv.model", classifier);
+	    
+	    Evaluation evaluation = new Evaluation(m_set);
+	    evaluation.crossValidateModel(classifier, m_set, 10, new Random(1));			    
+    		    
+	    PrintWriter writer = new PrintWriter("files/" + output_file);
+	    writer.println("F-Measure (HAM);Precisão (HAM);Recuperação (HAM);F-Measure (SPAM);Precisão (SPAM);Recuperação (SPAM); Acurácia");
+		writer.print(evaluation.fMeasure(0)+";");
+		writer.print(evaluation.precision(0)+";");
+		writer.print(evaluation.recall(0)+";");
+		writer.print(evaluation.fMeasure(1)+";");
+		writer.print(evaluation.precision(1)+";"); 
+		writer.print(evaluation.recall(1)+";");
+		System.out.println("Estimated Accuracy: "+Double.toString(evaluation.pctCorrect()));
+		
+		
+		double[][] cm = evaluation.confusionMatrix();
+		writer.println();
+		writer.println("Matriz de confusão");
+		writer.println("TP; FP; FN; TN");
+		for (int i=0; i < cm.length; i++ ){
+			for (int j=0; j < cm[0].length; j++){
+				writer.print(cm[i][j] + ";");
+			}
+		}
+		writer.close();		
+		System.out.println("DONE!");
+
+}
 }
